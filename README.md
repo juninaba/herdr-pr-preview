@@ -16,6 +16,12 @@ Install locally while developing:
 herdr plugin link .
 ```
 
+Or install from GitHub once published:
+
+```sh
+herdr plugin install juninaba/herdr-pr-preview
+```
+
 Confirm the action is visible:
 
 ```sh
