@@ -1,0 +1,17 @@
+id = "local.herdr-pr-status"
+name = "Herdr PR Status"
+version = "0.1.0"
+min_herdr_version = "0.7.0"
+description = "Show the GitHub pull request for the current Herdr workspace branch in a right split pane."
+platforms = ["linux", "macos"]
+
+[[actions]]
+id = "open"
+title = "Open PR Status"
+command = ["./open.sh"]
+
+[[panes]]
+id = "preview"
+title = "GitHub PR Status"
+command = ["./preview.sh"]
+placement = "split"
