@@ -26,13 +26,13 @@ herdr plugin link .
 Confirm the action is visible:
 
 ```sh
-herdr plugin action list --plugin local.herdr-pr-status
+herdr plugin action list --plugin juninaba.herdr-pr-preview
 ```
 
 Open the pane:
 
 ```sh
-herdr plugin action invoke open --plugin local.herdr-pr-status
+herdr plugin action invoke open --plugin juninaba.herdr-pr-preview
 ```
 
 ## Keybinding
@@ -43,7 +43,7 @@ Bind the action from `~/.config/herdr/config.toml`:
 [[keys.command]]
 key = "prefix+alt+p"
 type = "plugin_action"
-command = "local.herdr-pr-status.open"
+command = "juninaba.herdr-pr-preview.open"
 description = "open PR status"
 ```
 
@@ -69,7 +69,7 @@ If none of those resolve to a directory, the pane prints the attempted fallbacks
 bash -n open.sh preview.sh
 HERDR_PR_STATUS_NO_WAIT=1 HERDR_PR_STATUS_WORKTREE_PATH="$PWD" ./preview.sh
 herdr plugin link .
-herdr plugin action list --plugin local.herdr-pr-status
+herdr plugin action list --plugin juninaba.herdr-pr-preview
 ```
 
 The Herdr commands require access to the running Herdr state. If they fail under sandboxing or without a running Herdr session, run them inside the normal Herdr environment.

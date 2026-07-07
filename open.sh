@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PLUGIN_ID="local.herdr-pr-status"
+PLUGIN_ID="juninaba.herdr-pr-preview"
 PANE_ENTRYPOINT="preview"
 
 fail() {
