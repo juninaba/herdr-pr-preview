@@ -428,7 +428,7 @@ render_pr() {
   local checkout_path="$1"
   local fields output status template
 
-  fields="title,body,url,state,isDraft,author,baseRefName,headRefName,updatedAt,reviewDecision"
+  fields="title,body,url,state,isDraft,author,baseRefName,headRefName,updatedAt,reviewDecision,commits"
   template='{{printf "# %s\n\n" .title}}State: {{.state}}{{if .isDraft}} (draft){{end}}
 URL: {{.url}}
 Author: {{with .author}}{{.login}}{{else}}unknown{{end}}
@@ -436,6 +436,11 @@ Base: {{.baseRefName}}
 Head: {{.headRefName}}
 Updated: {{.updatedAt}}
 Review: {{if .reviewDecision}}{{.reviewDecision}}{{else}}none{{end}}
+
+## Commits
+{{if .commits}}{{range .commits}}- `{{printf "%.7s" .oid}}` {{.messageHeadline}}
+{{end}}{{else}}(no commits)
+{{end}}
 
 {{if .body}}{{.body}}{{else}}(no description){{end}}
 '
