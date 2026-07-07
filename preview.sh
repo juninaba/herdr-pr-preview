@@ -236,6 +236,38 @@ resolve_from_explicit_env() {
   return 1
 }
 
+resolve_from_pane_cwd() {
+  local name value path root
+
+  for name in HERDR_FOCUSED_PANE_CWD HERDR_WORKSPACE_CWD; do
+    value="${!name:-}"
+    if [ -z "$value" ]; then
+      continue
+    fi
+
+    if ! path="$(canonicalize_dir "$value")"; then
+      note "$name is set but is not a directory: $value"
+      continue
+    fi
+
+    if ! command -v git >/dev/null 2>&1; then
+      RESOLVED_PATH="$path"
+      return 0
+    fi
+
+    if root="$(git -C "$path" rev-parse --show-toplevel 2>/dev/null)" && [ -n "$root" ]; then
+      if path="$(canonicalize_dir "$root")"; then
+        RESOLVED_PATH="$path"
+        return 0
+      fi
+    fi
+
+    note "$name is set but is not inside a Git worktree: $value"
+  done
+
+  return 1
+}
+
 resolve_from_workspace_id() {
   local current_workspace_id json status path output
   current_workspace_id="$(workspace_id)"
@@ -304,6 +336,10 @@ resolve_checkout_path() {
     return 0
   fi
 
+  if resolve_from_pane_cwd; then
+    return 0
+  fi
+
   if resolve_from_workspace_id; then
     return 0
   fi
@@ -319,8 +355,9 @@ print_unresolved_context() {
   printf 'Could not resolve the current Herdr workspace checkout path.\n\n'
   printf 'Tried, in order:\n'
   printf '  1. Explicit checkout path environment variables such as HERDR_PR_STATUS_WORKTREE_PATH.\n'
-  printf '  2. HERDR_WORKSPACE_ID with herdr worktree list --workspace <id> --json.\n'
-  printf '  3. HERDR_PLUGIN_CONTEXT_JSON checkout/worktree fields.\n\n'
+  printf '  2. HERDR_FOCUSED_PANE_CWD or HERDR_WORKSPACE_CWD.\n'
+  printf '  3. HERDR_WORKSPACE_ID with herdr worktree list --workspace <id> --json.\n'
+  printf '  4. HERDR_PLUGIN_CONTEXT_JSON checkout/worktree fields.\n\n'
 
   if [ "${#RESOLVE_NOTES[@]}" -gt 0 ]; then
     printf 'Details:\n'

@@ -81,6 +81,8 @@ target_pane_id="$(
     HERDR_TARGET_PANE_ID \
     HERDR_PANE_ID || true
 )"
+focused_pane_cwd="$(first_set_env HERDR_FOCUSED_PANE_CWD || true)"
+workspace_cwd="$(first_set_env HERDR_WORKSPACE_CWD || true)"
 
 if [ -z "$target_pane_id" ]; then
   target_pane_id="$(context_value focused_pane_id || true)"
@@ -88,6 +90,14 @@ fi
 
 if [ -z "$target_pane_id" ]; then
   target_pane_id="$(context_value pane_id || true)"
+fi
+
+if [ -z "$focused_pane_cwd" ]; then
+  focused_pane_cwd="$(context_value focused_pane_cwd || true)"
+fi
+
+if [ -z "$workspace_cwd" ]; then
+  workspace_cwd="$(context_value workspace_cwd || true)"
 fi
 
 pane_args=(
@@ -109,8 +119,8 @@ add_env HERDR_PR_STATUS_WORKSPACE_ID "${HERDR_WORKSPACE_ID:-}"
 add_env HERDR_PLUGIN_CONTEXT_JSON "${HERDR_PLUGIN_CONTEXT_JSON:-}"
 add_env HERDR_PR_STATUS_CONTEXT_JSON "${HERDR_PLUGIN_CONTEXT_JSON:-}"
 add_env HERDR_PR_STATUS_WORKTREE_PATH "$target_worktree_path"
-add_env HERDR_FOCUSED_PANE_CWD "${HERDR_FOCUSED_PANE_CWD:-}"
-add_env HERDR_WORKSPACE_CWD "${HERDR_WORKSPACE_CWD:-}"
+add_env HERDR_FOCUSED_PANE_CWD "$focused_pane_cwd"
+add_env HERDR_WORKSPACE_CWD "$workspace_cwd"
 
 if ! "$resolved_herdr_bin" "${pane_args[@]}"; then
   fail "Failed to open the GitHub PR status pane."

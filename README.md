@@ -58,8 +58,9 @@ herdr server reload-config
 `preview.sh` resolves the checkout path in this order:
 
 1. Explicit environment variables such as `HERDR_PR_STATUS_WORKTREE_PATH`.
-2. `HERDR_WORKSPACE_ID` with `herdr worktree list --workspace <id> --json`.
-3. Checkout/worktree-specific fields in `HERDR_PLUGIN_CONTEXT_JSON`.
+2. `HERDR_FOCUSED_PANE_CWD` or `HERDR_WORKSPACE_CWD`.
+3. `HERDR_WORKSPACE_ID` with `herdr worktree list --workspace <id> --json`.
+4. Checkout/worktree-specific fields in `HERDR_PLUGIN_CONTEXT_JSON`.
 
 If none of those resolve to a directory, the pane prints the attempted fallbacks and exits after the user presses enter.
 
