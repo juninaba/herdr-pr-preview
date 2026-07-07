@@ -471,16 +471,14 @@ Review: {{if .reviewDecision}}{{.reviewDecision}}{{else}}none{{end}}
 main() {
   local checkout_path auth_output
 
-  printf 'GitHub PR Status\n'
-  printf '================\n\n'
+  printf 'GitHub PR Preview\n'
+  printf '=================\n\n'
 
   if ! resolve_checkout_path; then
     print_unresolved_context
     return 0
   fi
   checkout_path="$RESOLVED_PATH"
-
-  printf 'Checkout: %s\n\n' "$checkout_path"
 
   if ! command -v git >/dev/null 2>&1; then
     printf 'git is not installed or is not on PATH.\n'

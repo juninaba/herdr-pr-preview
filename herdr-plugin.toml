@@ -12,6 +12,6 @@ command = ["./open.sh"]
 
 [[panes]]
 id = "preview"
-title = "GitHub PR Status"
+title = "GitHub PR Preview"
 command = ["./preview.sh"]
 placement = "split"
