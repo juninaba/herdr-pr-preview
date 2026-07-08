@@ -4,9 +4,20 @@ set -euo pipefail
 HERDR_BIN="${HERDR_BIN_PATH:-herdr}"
 RESOLVE_NOTES=()
 RESOLVED_PATH=""
+RENDERED_OUTPUT=""
+CHECKS_PENDING=0
+SKIP_FINAL_WAIT=0
+POLL_SECONDS="${HERDR_PR_STATUS_POLL_SECONDS:-30}"
+case "$POLL_SECONDS" in
+  '' | *[!0-9]*) POLL_SECONDS=30 ;;
+esac
+if [ "$POLL_SECONDS" -eq 0 ]; then
+  POLL_SECONDS=30
+fi
+CHECKS_PENDING_SENTINEL="::herdr-pr-status:checks-pending::"
 
 wait_to_close() {
-  if [ "${HERDR_PR_STATUS_NO_WAIT:-}" = "1" ]; then
+  if [ "${HERDR_PR_STATUS_NO_WAIT:-}" = "1" ] || [ "$SKIP_FINAL_WAIT" = "1" ]; then
     return
   fi
 
@@ -428,8 +439,11 @@ render_pr() {
   local checkout_path="$1"
   local fields output status template
 
-  fields="title,body,url,state,isDraft,author,baseRefName,headRefName,updatedAt,reviewDecision,commits"
-  template='{{printf "# %s\n\n" .title}}State: {{.state}}{{if .isDraft}} (draft){{end}}
+  RENDERED_OUTPUT=""
+  CHECKS_PENDING=0
+
+  fields="title,body,url,state,isDraft,author,baseRefName,headRefName,updatedAt,reviewDecision,commits,statusCheckRollup"
+  template='{{$pending := false}}{{printf "# %s\n\n" .title}}State: {{.state}}{{if .isDraft}} (draft){{end}}
 URL: {{.url}}
 Author: {{with .author}}{{.login}}{{else}}unknown{{end}}
 Base: {{.baseRefName}}
@@ -437,13 +451,24 @@ Head: {{.headRefName}}
 Updated: {{.updatedAt}}
 Review: {{if .reviewDecision}}{{.reviewDecision}}{{else}}none{{end}}
 
+## Checks
+{{if .statusCheckRollup}}{{range .statusCheckRollup}}{{if eq .__typename "CheckRun"}}{{if ne .status "COMPLETED"}}{{$pending = true}}● {{.name}} ({{.status}})
+{{else if eq .conclusion "SUCCESS"}}✓ {{.name}}
+{{else if or (eq .conclusion "SKIPPED") (eq .conclusion "NEUTRAL")}}- {{.name}} ({{.conclusion}})
+{{else}}✗ {{.name}} ({{.conclusion}}){{if .detailsUrl}}
+    {{.detailsUrl}}{{end}}
+{{end}}{{else}}{{if eq .state "SUCCESS"}}✓ {{.context}}
+{{else if or (eq .state "PENDING") (eq .state "EXPECTED")}}{{$pending = true}}● {{.context}} ({{.state}})
+{{else}}✗ {{.context}} ({{.state}}){{if .targetUrl}}
+    {{.targetUrl}}{{end}}
+{{end}}{{end}}{{end}}{{else}}(no checks)
+{{end}}
 ## Commits
 {{if .commits}}{{range .commits}}- `{{printf "%.7s" .oid}}` {{.messageHeadline}}
 {{end}}{{else}}(no commits)
 {{end}}
-
 {{if .body}}{{.body}}{{else}}(no description){{end}}
-'
+{{if $pending}}::herdr-pr-status:checks-pending::{{end}}'
 
   set +e
   output="$(
@@ -454,23 +479,70 @@ Review: {{if .reviewDecision}}{{.reviewDecision}}{{else}}none{{end}}
   set -e
 
   if [ "$status" -eq 0 ]; then
-    printf '%s\n' "$output"
+    if [ "${output##*$'\n'}" = "$CHECKS_PENDING_SENTINEL" ]; then
+      CHECKS_PENDING=1
+      output="${output%$'\n'*}"
+    fi
+    RENDERED_OUTPUT="$output"
     return 0
   fi
 
   case "$output" in
     *"no pull requests found"* | *"No pull requests found"* | *"no pull requests match"* | *"no pull request found"*)
-      print_no_pr "$checkout_path" "$output"
+      RENDERED_OUTPUT="$(print_no_pr "$checkout_path" "$output")"
       ;;
     *"not logged into"* | *"authentication required"* | *"HTTP 401"* | *"HTTP 403"*)
-      print_gh_auth_needed "$output"
+      RENDERED_OUTPUT="$(print_gh_auth_needed "$output")"
       ;;
     *)
-      printf 'gh pr view failed.\n\n'
-      printf 'Checkout: %s\n\n' "$checkout_path"
-      printf '%s\n' "$output"
+      RENDERED_OUTPUT="$(
+        printf 'gh pr view failed.\n\n'
+        printf 'Checkout: %s\n\n' "$checkout_path"
+        printf '%s\n' "$output"
+      )"
       ;;
   esac
+}
+
+run_preview_loop() {
+  local checkout_path="$1"
+  local key rc stamp
+
+  while true; do
+    render_pr "$checkout_path"
+    stamp="$(date '+%H:%M:%S')"
+
+    printf '\033[H\033[2J'
+    printf 'GitHub PR Preview (updated %s)\n' "$stamp"
+    printf '=================\n\n'
+    printf '%s\n' "$RENDERED_OUTPUT"
+
+    if [ "$CHECKS_PENDING" = "1" ]; then
+      printf '\nchecks running, auto-refresh in %ss (r=refresh now, q=close)... ' "$POLL_SECONDS"
+      set +e
+      IFS= read -r -t "$POLL_SECONDS" -n 1 key
+      rc=$?
+      set -e
+      if [ "$rc" -ne 0 ]; then
+        # bash 3.2 returns 1 on timeout, bash 4+ returns >128; stdin is a
+        # tty here, so treat any failed read as a timeout and refresh.
+        continue
+      fi
+    else
+      printf '\nr=refresh, q=close... '
+      set +e
+      IFS= read -r -n 1 key
+      rc=$?
+      set -e
+      if [ "$rc" -ne 0 ]; then
+        return 0
+      fi
+    fi
+
+    case "$key" in
+      q | Q) return 0 ;;
+    esac
+  done
 }
 
 main() {
@@ -510,7 +582,14 @@ main() {
     return 0
   fi
 
-  render_pr "$checkout_path"
+  if [ "${HERDR_PR_STATUS_NO_WAIT:-}" = "1" ] || [ ! -t 0 ]; then
+    render_pr "$checkout_path"
+    printf '%s\n' "$RENDERED_OUTPUT"
+    return 0
+  fi
+
+  run_preview_loop "$checkout_path"
+  SKIP_FINAL_WAIT=1
 }
 
 main "$@"
