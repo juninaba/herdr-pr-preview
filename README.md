@@ -1,6 +1,13 @@
 # Herdr PR Status
 
-Herdr PR Status opens a right-side pane that shows the GitHub pull request for the current branch in the active Herdr workspace.
+Herdr PR Status opens a right-side pane that shows the GitHub pull request for the current branch in the active Herdr workspace, including CI check status.
+
+## Pane keys
+
+- `r` (or Enter): refresh now
+- `q`: close the pane
+
+While CI checks are still running, the pane refreshes automatically every 30 seconds. Once all checks finish, it switches to manual refresh. Set `HERDR_PR_STATUS_POLL_SECONDS` to change the interval.
 
 ## Setup
 

@@ -1,8 +1,8 @@
 id = "juninaba.herdr-pr-preview"
 name = "Herdr PR Status"
-version = "0.1.0"
+version = "0.2.0"
 min_herdr_version = "0.7.0"
-description = "Show the GitHub pull request for the current Herdr workspace branch in a right split pane."
+description = "Show the GitHub pull request and CI check status for the current Herdr workspace branch in a right split pane."
 platforms = ["linux", "macos"]
 
 [[actions]]
